@@ -1,0 +1,30 @@
+{
+  "name": "docx-ipactory",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 5050",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
+  },
+  "dependencies": {
+    "docx": "^7.3.0",
+    "docx-preview": "^0.1.8",
+    "file-saver": "^2.0.5",
+    "uuid": "^8.3.2",
+    "vue": "^3.2.31",
+    "vuex": "^4.0.2"
+  },
+  "devDependencies": {
+    "@rushstack/eslint-patch": "^1.1.0",
+    "@vitejs/plugin-vue": "^2.2.2",
+    "@vue/eslint-config-prettier": "^7.0.0",
+    "eslint": "^8.5.0",
+    "eslint-plugin-vue": "^8.2.0",
+    "lodash": "^4.17.21",
+    "prettier": "^2.5.1",
+    "sass": "^1.49.9",
+    "sass-loader": "^12.6.0",
+    "vite": "^2.8.4"
+  }
+}
