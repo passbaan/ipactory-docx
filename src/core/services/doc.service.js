@@ -269,9 +269,10 @@ const generate = (x, count = { p: 0 }) => {
     });
     if (x.level === 1) {
       count.p += 1;
-      if(count.p !== 1){
-
-        newChildren.unshift(new TextRun({ text: `[${pad(count.p-1, 4)}]  ` }));
+      if (count.p !== 1) {
+        newChildren.unshift(
+          new TextRun({ text: `[${pad(count.p - 1, 4)}]  ` })
+        );
       }
       if (count.p === 1) {
         style.heading = HeadingLevel.HEADING_1;
@@ -396,7 +397,7 @@ const fileToDataUri = (file) =>
     var xhr = new XMLHttpRequest();
     xhr.open("GET", file, true);
     xhr.responseType = "blob";
-    xhr.onload = function (e) {
+    xhr.onload = function () {
       console.log(this.response);
       var reader = new FileReader();
       reader.onload = function (event) {
