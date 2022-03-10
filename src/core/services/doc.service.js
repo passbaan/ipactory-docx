@@ -26,7 +26,11 @@ import {
   PageBreak,
   HeadingLevel,
 } from "docx";
-import images from "../../assets/images";
+import fig1 from "/public_assets/images/fig1.jpg";
+import fig2 from "/public_assets/images/fig2.jpg";
+import fig3 from "/public_assets/images/fig3.jpg";
+import fig4 from "/public_assets/images/fig4.jpg";
+const images = [fig1, fig2, fig3, fig4];
 // console.log("file: do363c.service.js | line 29 | images", images);
 import * as _ from "lodash";
 import { saveAs } from "file-saver";
