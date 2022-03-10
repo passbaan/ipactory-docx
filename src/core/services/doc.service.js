@@ -392,7 +392,7 @@ const generate = (x, count = { p: 0 }) => {
   return null;
 };
 const fileToDataUri = (file) =>
-  new Promise((resolve, reject) => {
+  new Promise((resolve) => {
     var xhr = new XMLHttpRequest();
     xhr.open("GET", file, true);
     xhr.responseType = "blob";
