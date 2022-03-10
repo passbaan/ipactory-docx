@@ -11,9 +11,8 @@
 <script>
 import parse from "@/core/services/htmlParser.service";
 import doc from "@/core/services/doc.service";
-// import { renderAsync } from "docx-preview";
+import { renderAsync } from "docx-preview";
 
-// import domJSON from "domjson";
 export default {
   name: "TestComponent",
   data() {
@@ -28,9 +27,9 @@ export default {
   methods: {
     async submitForm() {
       this.document = await doc(this.parsedText);
-      // renderAsync(this.document, document.getElementById("container")).then(
-      //   () => console.log("docx: finished")
-      // );
+      renderAsync(this.document, document.getElementById("container")).then(
+        () => console.log("docx: finished")
+      );
     },
     fileUploaded(event) {
       const [f] = event.target.files;

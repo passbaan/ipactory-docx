@@ -5,7 +5,6 @@ import {
   Paragraph,
   TextRun,
   AlignmentType,
-  hexColorValue,
   TableCell,
   Table,
   TableRow,
@@ -24,21 +23,29 @@ import {
   BorderStyle,
   ImageRun,
   PageBreak,
+  ShadingType,
   HeadingLevel,
+  convertInchesToTwip,
+  LevelFormat,
 } from "docx";
 import fig1 from "/public_assets/images/fig1.jpg";
 import fig2 from "/public_assets/images/fig2.jpg";
 import fig3 from "/public_assets/images/fig3.jpg";
 import fig4 from "/public_assets/images/fig4.jpg";
 const images = [fig1, fig2, fig3, fig4];
-// console.log("file: do363c.service.js | line 29 | images", images);
+
 import * as _ from "lodash";
 import { saveAs } from "file-saver";
 const calcTWIP = (val) => {
+  if (val === "none") {
+    return 0;
+  }
   if (val.includes("cm")) {
     return parseInt(val.replace("cm")) * 566.9291338583;
   } else if (val.includes("pt")) {
     return parseInt(val.replace("pt")) * 20;
+  } else if (val.includes("px")) {
+    return parseInt(val.replace("px")) * 15;
   }
   return 0;
 };
@@ -59,7 +66,7 @@ const STYLES = [
     id: "color",
     key: "color",
     isStatic: false,
-    value: (v) => hexColorValue(v),
+    value: (v) => v.replace("#", ""),
   },
   {
     id: "font",
@@ -72,6 +79,12 @@ const STYLES = [
     key: "font-size",
     isStatic: false,
     value: (v) => parseFloat(v.replace("pt", "")),
+  },
+  {
+    id: "indent",
+    key: "text-indent",
+    isStatic: false,
+    value: (val) => ({ start: calcTWIP(val) }),
   },
   {
     id: "indent",
@@ -89,10 +102,14 @@ const STYLES = [
     },
   },
   {
-    id: "highlight",
+    id: "shading",
     key: "background-color",
     isStatic: false,
-    value: (v) => hexColorValue(v),
+    value: (v) => ({
+      type: ShadingType.CLEAR,
+
+      fill: v.replace("#", ""),
+    }),
   },
   {
     id: "width",
@@ -112,9 +129,50 @@ const STYLES = [
         typeof v === "string" ? 240 : parseFloat(((v * 240) / 100).toFixed(2)),
     }),
   },
+  {
+    id: "borders",
+    key: "border",
+    keys: ["border-right", "border-left", "border-top", "border-bottom"],
+    isStatic: false,
+    value: (v, key = "border") => {
+      const returnObject = {
+        top: { style: BorderStyle.NONE, size: 0 },
+        bottom: { style: BorderStyle.NONE, size: 0 },
+        left: { style: BorderStyle.NONE, size: 0 },
+        right: { style: BorderStyle.NONE, size: 0 },
+      };
+      if (key === "border") {
+        if (v === "none") {
+          return returnObject;
+        }
+      } else {
+        const kk = key.replace("border-", "");
+        // const test={};
+        // test[kk]={
+        //   style:BorderStyle.SINGLE,
+        //   size:calcTWIP(keys[2])
+        // };
+        let size = 0;
+        if (v !== "none") {
+          const keys = v.split(" ");
+          const calc = calcTWIP(keys[2]);
+          size = calc;
+        }
+        return [
+          "borders",
+          {
+            style: BorderStyle.SINGLE,
+            size,
+          },
+          kk,
+        ];
+      }
+    },
+  },
 ];
 const getStyles = (key, value) => {
   const style = STYLES.find((style) => style.key === key);
+
   if (style) {
     return [
       style.id,
@@ -122,6 +180,10 @@ const getStyles = (key, value) => {
         ? style.values[value]
         : style.value(value),
     ];
+  }
+  const mStyles = STYLES.find((ss) => ss.keys && ss.keys.includes(key));
+  if (mStyles) {
+    return mStyles.value(value, key);
   }
   return null;
 };
@@ -139,8 +201,16 @@ const attrStringToJson = (string) => {
     v = _.trim(style[1]);
     if (k.length > 0 && v.length > 0) {
       const styleItem = getStyles(k, v);
+
       if (styleItem !== null) {
-        json.style[styleItem[0]] = styleItem[1];
+        if (styleItem.length === 2) {
+          json.style[styleItem[0]] = styleItem[1];
+        } else if (styleItem.length === 3) {
+          if (!json.style[styleItem]) {
+            json.style[styleItem[0]] = {};
+          }
+          json.style[styleItem[0]][styleItem[2]] = styleItem[1];
+        }
       } else {
         json.style[k] = v;
       }
@@ -271,15 +341,28 @@ const generate = (x, count = { p: 0 }) => {
         newChildren.push(c);
       }
     });
+    x.reference = "my-crazy-numbering";
     if (x.level === 1) {
       count.p += 1;
-      if (count.p !== 1) {
-        newChildren.unshift(
-          new TextRun({ text: `[${pad(count.p - 1, 4)}]  ` })
-        );
-      }
       if (count.p === 1) {
         style.heading = HeadingLevel.HEADING_1;
+        x.level = 0;
+      } else if (
+        x.children[0].children &&
+        x.children[0] &&
+        x.children[0].children[0].isStrong
+      ) {
+        console.log("file: doc.service.js | line 348 | generate | x", x);
+
+        console.log(
+          "file: doc.service.js | line 346 | generate | count",
+          count
+        );
+
+        style.heading = HeadingLevel.HEADING_2;
+        x.level = 0;
+
+        // x.reference=''
       }
     }
     if ("size" in style) {
@@ -288,6 +371,10 @@ const generate = (x, count = { p: 0 }) => {
 
     return new Paragraph({
       children: newChildren,
+      numbering: {
+        reference: x.reference,
+        level: x.level, // How deep you want the bullet to be. Maximum level is 9
+      },
       ...style,
     });
   } else if (x.type === "text") {
@@ -321,7 +408,6 @@ const generate = (x, count = { p: 0 }) => {
     });
   } else if (x.type === "span") {
     return children;
-    // console.log("file: doc.service.js | line 159 | generate | x", x);
   } else if (x.type === "strong" || x.type === "mfenced") {
     return children[0];
   } else if (x.type === "sub") {
@@ -337,7 +423,9 @@ const generate = (x, count = { p: 0 }) => {
   } else if (x.type === "comment") {
     return new PageBreak();
   } else if (x.type === "table") {
-    return children[0];
+    return new Table({
+      rows: children[0],
+    });
   } else if (x.type === "div") {
     return children;
   } else if (x.type === "br") {
@@ -346,9 +434,7 @@ const generate = (x, count = { p: 0 }) => {
       break: 1,
     });
   } else if (x.type === "tbody") {
-    return new Table({
-      rows: children,
-    });
+    return children;
   } else if (x.type === "tr") {
     return new TableRow({
       children,
@@ -402,7 +488,6 @@ const fileToDataUri = (file) =>
     xhr.open("GET", file, true);
     xhr.responseType = "blob";
     xhr.onload = function () {
-      console.log(this.response);
       var reader = new FileReader();
       reader.onload = function (event) {
         var res = event.target.result;
@@ -422,7 +507,9 @@ function pad(num, size) {
 const createNew = async (json) => {
   // const { children } = json;
   const x = traverse(json);
+
   let generated = generate(x).section.filter((i) => i);
+
   if (images) {
     const resolved = await Promise.all(
       Object.entries(images).map(async (image) => {
@@ -434,7 +521,10 @@ const createNew = async (json) => {
     resolved.forEach((item) => {
       const data = Object.entries(item)[0];
       const newLabel = new Paragraph({
-        children: [new TextRun({ text: data[0] })],
+        children: [
+          new PageBreak(),
+          new TextRun({ text: `Figure  ${data[0] + 1}` }),
+        ],
         alignment: AlignmentType.CENTER,
       });
       generated.push(newLabel);
@@ -458,6 +548,83 @@ const createNew = async (json) => {
     });
   }
   const doc = new Document({
+    styles: {
+      listParagraph: {
+        run: {
+          color: "#000000",
+          size: 23,
+        },
+        paragraph: {
+          indent: {
+            left: convertInchesToTwip(0),
+          },
+        },
+      },
+    },
+    numbering: {
+      config: [
+        {
+          reference: "my-crazy-numbering",
+          levels: [
+            {
+              level: 0,
+              format: LevelFormat.DECIMAL,
+              start: 0,
+              text: "",
+              alignment: AlignmentType.START,
+              style: {
+                paragraph: {
+                  indent: {
+                    left: convertInchesToTwip(0.0),
+                    hanging: convertInchesToTwip(0.18),
+                  },
+                },
+              },
+            },
+            {
+              level: 1,
+              format: LevelFormat.DECIMAL,
+              start: 1,
+              text: "[0%10%2] ",
+              alignment: AlignmentType.START,
+              style: {
+                paragraph: {
+                  indent: {
+                    left: convertInchesToTwip(0.1),
+                    // hanging: convertInchesToTwip(0.68),
+                  },
+                },
+              },
+            },
+            {
+              level: 3,
+              format: LevelFormat.DECIMAL,
+              text: "[0%20%3]",
+              alignment: AlignmentType.START,
+              style: {
+                paragraph: {
+                  indent: {
+                    left: convertInchesToTwip(1.5),
+                    hanging: convertInchesToTwip(1.18),
+                  },
+                },
+              },
+            },
+            {
+              level: 3,
+              format: LevelFormat.UPPER_LETTER,
+              text: "%4)",
+              alignment: AlignmentType.START,
+              style: {
+                paragraph: {
+                  indent: { left: 2880, hanging: 2420 },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    },
     sections: [
       {
         properties: {
