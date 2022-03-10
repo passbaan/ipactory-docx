@@ -1,8 +1,8 @@
 <template>
-  <div>
+  <div class="input">
     <form @submit.prevent="submitForm">
-      <input type="file" @change="fileUploaded" required />
-      <button type="submit">Start</button>
+      <label for="file">Upload an html file</label>
+      <input type="file" id="file" @change="fileUploaded" required />
     </form>
     <div id="container"></div>
   </div>
@@ -11,7 +11,7 @@
 <script>
 import parse from "@/core/services/htmlParser.service";
 import doc from "@/core/services/doc.service";
-import { renderAsync } from "docx-preview";
+// import { renderAsync } from "docx-preview";
 
 // import domJSON from "domjson";
 export default {
@@ -28,9 +28,9 @@ export default {
   methods: {
     async submitForm() {
       this.document = await doc(this.parsedText);
-      renderAsync(this.document, document.getElementById("container")).then(
-        () => console.log("docx: finished")
-      );
+      // renderAsync(this.document, document.getElementById("container")).then(
+      //   () => console.log("docx: finished")
+      // );
     },
     fileUploaded(event) {
       const [f] = event.target.files;
@@ -55,10 +55,23 @@ export default {
             .replace(/\s\s+/g, " ")
             .replace(/>\s+</g, "><")
         );
+        this.submitForm();
       }
     },
   },
 };
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.input {
+  padding: 20px;
+  width: 100%;
+  display: grid;
+  place-items: center;
+}
+label {
+  display: block;
+  text-align: center;
+  padding: 20px;
+}
+</style>
