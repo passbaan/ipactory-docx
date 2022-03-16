@@ -8,6 +8,9 @@ module.exports = {
     "eslint:recommended",
     "@vue/eslint-config-prettier",
   ],
+  rules: {
+    "no-debugger": "off",
+  },
   env: {
     "vue/setup-compiler-macros": true,
   },

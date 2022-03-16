@@ -161,7 +161,7 @@ const STYLES = [
         return [
           "borders",
           {
-            style: BorderStyle.SINGLE,
+            style: size !== 0 ? BorderStyle.SINGLE : BorderStyle.NONE,
             size,
           },
           kk,
@@ -183,7 +183,8 @@ const getStyles = (key, value) => {
   }
   const mStyles = STYLES.find((ss) => ss.keys && ss.keys.includes(key));
   if (mStyles) {
-    return mStyles.value(value, key);
+    const x = mStyles.value(value, key);
+    return x;
   }
   return null;
 };
@@ -203,12 +204,20 @@ const attrStringToJson = (string) => {
       const styleItem = getStyles(k, v);
 
       if (styleItem !== null) {
+        if (!json.style[styleItem[0]]) {
+          json.style[styleItem[0]] = {};
+        }
         if (styleItem.length === 2) {
-          json.style[styleItem[0]] = styleItem[1];
-        } else if (styleItem.length === 3) {
-          if (!json.style[styleItem]) {
-            json.style[styleItem[0]] = {};
+          if (styleItem[0] === "borders") {
+            Object.entries(styleItem[1]).forEach(([ik, iv]) => {
+              if (!json.style[styleItem[0]][ik]) {
+                json.style[styleItem[0]][ik] = iv;
+              }
+            });
+          } else {
+            json.style[styleItem[0]] = styleItem[1];
           }
+        } else if (styleItem.length === 3) {
           json.style[styleItem[0]][styleItem[2]] = styleItem[1];
         }
       } else {
@@ -231,9 +240,7 @@ const preserverParentStyle = (item) => {
     if (!item.styles) {
       item.styles = { current: {} };
     }
-
     Object.assign(item.styles.current, ssa[0].data);
-    // console.log("file: doc.service.js | line 189 | findMoreSpans | ss", ss);
     findMoreSpans(ssa.slice(1));
   })(state);
 };
@@ -255,6 +262,7 @@ const traverse = (input, styles = {}, state = [], level = 0) => {
   let x = {};
   x["key"] = text.type;
   x["data"] = passStyles;
+
   const currentState = [...state, x];
 
   if (input.children) {
@@ -262,7 +270,6 @@ const traverse = (input, styles = {}, state = [], level = 0) => {
       return traverse(item, passStyles, currentState, level + 1);
     });
   }
-
   switch (text.type) {
     case "text":
       text.state = currentState;
@@ -295,18 +302,17 @@ const traverse = (input, styles = {}, state = [], level = 0) => {
       }
       break;
     case "sub":
-      // preserverParentStyle(text.children[0]);
+      preserverParentStyle(text.children[0]);
       text.children[0]["subScript"] = true;
       break;
     case "u":
-      // preserverParentStyle(text.children[0]);
+      preserverParentStyle(text.children[0]);
       text.children[0]["underline"] = true;
       break;
     case "s":
-      // preserverParentStyle(text.children[0]);
+      preserverParentStyle(text.children[0]);
       text.children[0]["strike"] = true;
       break;
-
     default:
       text.__v = 1;
   }
@@ -352,23 +358,14 @@ const generate = (x, count = { p: 0 }) => {
         x.children[0] &&
         x.children[0].children[0].isStrong
       ) {
-        console.log("file: doc.service.js | line 348 | generate | x", x);
-
-        console.log(
-          "file: doc.service.js | line 346 | generate | count",
-          count
-        );
-
         style.heading = HeadingLevel.HEADING_2;
         x.level = 0;
-
         // x.reference=''
       }
     }
     if ("size" in style) {
       style.size *= 2;
     }
-
     return new Paragraph({
       children: newChildren,
       numbering: {
@@ -425,6 +422,12 @@ const generate = (x, count = { p: 0 }) => {
   } else if (x.type === "table") {
     return new Table({
       rows: children[0],
+      borders: {
+        top: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+      },
     });
   } else if (x.type === "div") {
     return children;
@@ -438,6 +441,12 @@ const generate = (x, count = { p: 0 }) => {
   } else if (x.type === "tr") {
     return new TableRow({
       children,
+      borders: {
+        top: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+      },
     });
   } else if (x.type === "td") {
     const localSettings = {};
@@ -449,6 +458,7 @@ const generate = (x, count = { p: 0 }) => {
     return new TableCell({
       children,
       ...localSettings,
+
       ...x.styles.current,
     });
   } else if (x.type === "math") {
@@ -499,11 +509,6 @@ const fileToDataUri = (file) =>
     xhr.send();
   });
 
-function pad(num, size) {
-  num = num.toString();
-  while (num.length < size) num = "0" + num;
-  return num;
-}
 const createNew = async (json) => {
   // const { children } = json;
   const x = traverse(json);
@@ -526,6 +531,7 @@ const createNew = async (json) => {
           new TextRun({ text: `Figure  ${data[0] + 1}` }),
         ],
         alignment: AlignmentType.CENTER,
+        level: 4,
       });
       generated.push(newLabel);
       const newImage = new Paragraph({
@@ -576,7 +582,7 @@ const createNew = async (json) => {
                 paragraph: {
                   indent: {
                     left: convertInchesToTwip(0.0),
-                    hanging: convertInchesToTwip(0.18),
+                    // hanging: convertInchesToTwip(0.18),
                   },
                 },
               },
@@ -593,31 +599,6 @@ const createNew = async (json) => {
                     left: convertInchesToTwip(0.1),
                     // hanging: convertInchesToTwip(0.68),
                   },
-                },
-              },
-            },
-            {
-              level: 3,
-              format: LevelFormat.DECIMAL,
-              text: "[0%20%3]",
-              alignment: AlignmentType.START,
-              style: {
-                paragraph: {
-                  indent: {
-                    left: convertInchesToTwip(1.5),
-                    hanging: convertInchesToTwip(1.18),
-                  },
-                },
-              },
-            },
-            {
-              level: 3,
-              format: LevelFormat.UPPER_LETTER,
-              text: "%4)",
-              alignment: AlignmentType.START,
-              style: {
-                paragraph: {
-                  indent: { left: 2880, hanging: 2420 },
                 },
               },
             },
