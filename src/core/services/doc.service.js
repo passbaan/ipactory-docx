@@ -354,12 +354,17 @@ const generate = (x, count = { p: 0 }) => {
         style.heading = HeadingLevel.HEADING_1;
         x.level = 0;
       } else if (
-        x.children[0].children &&
         x.children[0] &&
+        x.children[0].children &&
         x.children[0].children[0].isStrong
       ) {
+        if (x.children[0].children[0].value.toLowerCase() === "claims") {
+          x.level = 2;
+        } else {
+          x.level = 0;
+        }
         style.heading = HeadingLevel.HEADING_2;
-        x.level = 0;
+
         // x.reference=''
       }
     }
